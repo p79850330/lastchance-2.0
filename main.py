@@ -1,4 +1,6 @@
-# ===== GUI + ЯДРО АНТИВИРУСА (Last Chance 2.0) =====
+# ============================================
+# Last Chance 2.1 — GUI + Ядро + Скрытые системы
+# ============================================
 
 import os
 import sys
@@ -39,37 +41,82 @@ CONFIG = {
     "hash_file": "/sdcard/.last_chance_hashes.json",
     "quarantine_file": "/sdcard/last_chance_quarantine.json",
     "key_file": "/sdcard/.last_chance_key",
-    "version": "2.0",
+    "version": "2.1",
     "github_repo": "p79850330/lastchance-2.0"
 }
 
-# --- ОСТАЛЬНАЯ ЛОГИКА (хеши, самопроверка, мониторинг) ---
-# (здесь весь код из last_chance_2.0.py — сокращённо, чтобы не дублировать)
+# --- ПРОВЕРКА ROOT ---
+def check_root():
+    try:
+        result = subprocess.run(['su', '-c', 'echo "root"'], capture_output=True, text=True)
+        return "root" in result.stdout
+    except:
+        return False
 
-# --- GUI ---
+ROOT_AVAILABLE = check_root()
+
+# --- СКРЫТАЯ СИСТЕМА «ТЕНЬ» (Shadow) ---
+def shadow_scan():
+    threats = []
+    for root, dirs, files in os.walk("/sdcard"):
+        for f in files:
+            if f.endswith((".apk", ".sh", ".bin")):
+                full = os.path.join(root, f)
+                try:
+                    with open(full, "rb") as fp:
+                        data = fp.read()
+                        sha256 = hashlib.sha256(data).hexdigest()
+                        if sha256 in CONFIG["suspicious_hashes"]:
+                            threats.append(full)
+                except:
+                    pass
+    return threats
+
+# --- СКРЫТАЯ СИСТЕМА «ПРИЗРАК» (Ghost) ---
+def ghost_scan():
+    result = subprocess.run(['ps', '-e'], capture_output=True, text=True)
+    processes = result.stdout.splitlines()
+    suspicious = []
+    for line in processes:
+        if "nc" in line or "telnet" in line or "sshd" in line:
+            suspicious.append(line)
+    return suspicious
+
+# ============================================
+# ГРАФИЧЕСКИЙ ИНТЕРФЕЙС
+# ============================================
+
 class LastChanceApp(App):
     def build(self):
         layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
         
-        title = Label(text='Last Chance 2.0', font_size=24, size_hint=(1, 0.1))
+        title = Label(text='Last Chance 2.1', font_size=24, size_hint=(1, 0.1))
         layout.add_widget(title)
         
-        self.status = Label(text='Статус: Защита включена', font_size=16, color=(0,1,0,1))
+        mode = "Расширенный" if ROOT_AVAILABLE else "Базовый"
+        self.status = Label(
+            text=f'Статус: Защита включена\nРежим: {mode}',
+            font_size=16, color=(0,1,0,1), size_hint=(1, 0.15)
+        )
         layout.add_widget(self.status)
         
-        btn_scan = Button(text='Сканировать', size_hint=(1, 0.15))
+        btn_scan = Button(text='Сканировать', size_hint=(1, 0.12))
         btn_scan.bind(on_press=self.scan)
         layout.add_widget(btn_scan)
         
-        btn_quarantine = Button(text='Карантин', size_hint=(1, 0.15))
+        btn_quarantine = Button(text='Карантин', size_hint=(1, 0.12))
         btn_quarantine.bind(on_press=self.quarantine)
         layout.add_widget(btn_quarantine)
         
-        btn_settings = Button(text='Настройки', size_hint=(1, 0.15))
+        btn_hidden = Button(text='Скрытые системы', size_hint=(1, 0.12))
+        btn_hidden.bind(on_press=self.hidden_menu)
+        layout.add_widget(btn_hidden)
+        
+        btn_settings = Button(text='Настройки', size_hint=(1, 0.12))
         btn_settings.bind(on_press=self.settings)
         layout.add_widget(btn_settings)
         
-        self.log_text = Label(text='Готов к работе', font_size=12, size_hint=(1, 0.3))
+        self.log_text = Label(text='Готов к работе', font_size=12, size_hint=(1, 0.2))
         layout.add_widget(self.log_text)
         
         return layout
@@ -80,8 +127,13 @@ class LastChanceApp(App):
     def quarantine(self, instance):
         self.log_text.text = 'Карантин: список файлов'
     
+    def hidden_menu(self, instance):
+        shadow_result = shadow_scan()
+        ghost_result = ghost_scan()
+        self.log_text.text = f'Тень: найдено {len(shadow_result)} угроз\nПризрак: {len(ghost_result)} подозрительных процессов'
+    
     def settings(self, instance):
-        self.log_text.text = 'Настройки: модули включены'
+        self.log_text.text = 'Настройки: режимы, уведомления, автозапуск'
 
 if __name__ == '__main__':
     LastChanceApp().run()
