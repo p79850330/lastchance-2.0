@@ -15,11 +15,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y python3-pip python3-dev git zip unzip openjdk-17-jdk
+          sudo apt install -y python3-pip python3-dev git zip unzip openjdk-17-jdk zlib1g-dev
           sudo pip3 install buildozer cython
 
       - name: Build APK
         run: |
+          export C_INCLUDE_PATH="/usr/include"
+          export CPLUS_INCLUDE_PATH="/usr/include"
+          export CPATH="/usr/include"
           yes | buildozer android debug deploy run
 
       - name: Upload APK
