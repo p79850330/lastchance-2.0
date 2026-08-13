@@ -4,7 +4,7 @@ title = Last Chance
 package.name = lastchance
 package.domain = org.lastchance
 
-version = 1.0
+version = 2.1
 requirements = python3,kivy,cryptography,openssl
 
 source.dir = .
