@@ -5,7 +5,7 @@ package.name = lastchance
 package.domain = org.lastchance
 
 version = 1.0
-requirements = python3,cryptography,openssl
+requirements = python3,kivy,cryptography,openssl
 
 source.dir = .
 
